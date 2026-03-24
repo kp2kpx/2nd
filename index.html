@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Polymarket Financial Daily Dashboard</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header>
+      <h1>Financial Up/Down Daily Markets</h1>
+      <p>
+        Limited watchlist for Polymarket daily financial contracts. Times are displayed in
+        <strong>Indian Standard Time (IST, UTC+05:30)</strong>.
+      </p>
+    </header>
+
+    <main>
+      <section class="meta">
+        <p id="last-refresh">Last refresh: --</p>
+        <p id="status-message">Loading markets…</p>
+      </section>
+      <section id="markets" class="market-grid" aria-live="polite"></section>
+    </main>
+
+    <template id="market-card-template">
+      <article class="market-card">
+        <h2 class="market-title"></h2>
+        <p class="market-question"></p>
+        <div class="details-grid">
+          <div>
+            <span class="label">Target Price</span>
+            <span class="target-price">--</span>
+          </div>
+          <div>
+            <span class="label">Live Price</span>
+            <span class="live-price">--</span>
+          </div>
+          <div>
+            <span class="label">Yes Odds</span>
+            <span class="yes-odds">--</span>
+          </div>
+          <div>
+            <span class="label">No Odds</span>
+            <span class="no-odds">--</span>
+          </div>
+          <div>
+            <span class="label">Closes (IST)</span>
+            <span class="close-time">--</span>
+          </div>
+          <div>
+            <span class="label">Countdown</span>
+            <span class="countdown">--</span>
+          </div>
+        </div>
+      </article>
+    </template>
+
+    <script type="module" src="app.js"></script>
+  </body>
+</html>
