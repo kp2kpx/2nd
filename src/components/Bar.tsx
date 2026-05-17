@@ -4,9 +4,9 @@ import { Text } from '@react-three/drei'
 import * as THREE from 'three'
 import { StablecoinData } from '../types'
 
-const BAR_WIDTH = 1.2
-const BAR_DEPTH = 1.2
-const MAX_HEIGHT = 12
+const BAR_WIDTH = 2.0
+const BAR_DEPTH = 2.0
+const MAX_HEIGHT = 14
 
 interface BarProps {
   coin: StablecoinData
