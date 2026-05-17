@@ -1,0 +1,57 @@
+name: Fetch Data & Build
+
+on:
+  push:
+    branches: [main, "claude/**"]
+  schedule:
+    - cron: '0 6 * * *'   # refresh data daily at 06:00 UTC
+  workflow_dispatch:
+
+jobs:
+  fetch-and-build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - run: npm ci
+
+      - name: Fetch stablecoin data from DefiLlama
+        run: node scripts/fetch-data.mjs
+
+      - name: Show fetched data summary
+        run: |
+          echo "=== stablecoins.json preview ==="
+          node -e "
+            const d = JSON.parse(require('fs').readFileSync('public/stablecoins.json','utf8'));
+            d.forEach(c => {
+              const last = c.series[c.series.length-1];
+              const date = new Date(last.date*1000).toISOString().slice(0,10);
+              const supply = (last.supply/1e9).toFixed(3);
+              console.log(c.symbol.padEnd(8), date, '\$'+supply+'B');
+            });
+          "
+
+      - name: Commit data if changed
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add public/stablecoins.json
+          git diff --cached --quiet || git commit -m "chore: refresh stablecoin data $(date -u +%Y-%m-%d)"
+          git push
+
+      - name: Build
+        run: npm run build
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
