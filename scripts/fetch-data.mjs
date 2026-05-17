@@ -4,15 +4,12 @@
  *
  * Run: node scripts/fetch-data.mjs
  *
- * DefiLlama API endpoints used:
- *
- * GET https://stablecoins.llama.fi/stablecoins
- *   → { peggedAssets: [{id, name, symbol, chains, chainCirculating: {Base: {current: {peggedUSD}}}}] }
- *
- * GET https://stablecoins.llama.fi/stablecoin/{id}
- *   → { chainBalances: { Base: { tokens: [{date, circulatingSupply: {peggedUSD}}] } } }
- *
- * Supply extraction tries multiple field paths for robustness.
+ * Strategy:
+ *   1. GET /stablecoins → list all coins with Base chain + current supply
+ *   2. For each coin, GET /stablecoincharts/Base?stablecoin={id} → daily series
+ *      (this endpoint returns [{date, totalCirculatingUSD:{peggedUSD:n}}])
+ *      Fallback: GET /stablecoin/{id} → chainBalances.Base.tokens[]
+ *      with exhaustive field extraction across all known shapes.
  */
 
 import { writeFileSync, mkdirSync } from 'fs'
@@ -20,7 +17,8 @@ import { join, dirname } from 'path'
 import { fileURLToPath } from 'url'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
-const OUT_PATH = join(__dirname, '..', 'public', 'stablecoins.json')
+const OUT_PATH   = join(__dirname, '..', 'public', 'stablecoins.json')
+const DEBUG_PATH = join(__dirname, '..', 'public', 'debug-raw-token.json')
 
 const BRAND_COLORS = {
   USDC:       '#2775CA',
@@ -45,32 +43,43 @@ function brandColor(symbol, name) {
   return BRAND_COLORS[symbol] ?? BRAND_COLORS[name] ?? BRAND_COLORS.DEFAULT
 }
 
-/** Extract USD supply from a token object — tries every known DefiLlama field shape. */
+/**
+ * Try to extract a USD numeric supply from any token/point shape DefiLlama uses.
+ * Returns the first positive number found across all known field paths.
+ */
 function extractSupply(t) {
-  // Shape A: { circulatingSupply: { peggedUSD: number } }
-  if (t.circulatingSupply != null) {
-    if (typeof t.circulatingSupply === 'number') return t.circulatingSupply
-    if (typeof t.circulatingSupply?.peggedUSD === 'number') return t.circulatingSupply.peggedUSD
-    const vals = Object.values(t.circulatingSupply).filter(v => typeof v === 'number')
-    if (vals.length) return vals.reduce((a, b) => a + b, 0)
+  if (!t || typeof t !== 'object') return 0
+
+  const tryNum = (v) => (typeof v === 'number' && v > 0 ? v : null)
+  const tryObj = (v) => {
+    if (!v || typeof v !== 'object') return null
+    // Check .peggedUSD first, then any numeric value
+    if (tryNum(v.peggedUSD)) return v.peggedUSD
+    const nums = Object.values(v).filter((x) => typeof x === 'number' && x > 0)
+    return nums.length ? nums.reduce((a, b) => a + b, 0) : null
   }
-  // Shape B: { circulating: { peggedUSD: number } }  ← matches /stablecoins list shape
-  if (t.circulating != null) {
-    if (typeof t.circulating === 'number') return t.circulating
-    if (typeof t.circulating?.peggedUSD === 'number') return t.circulating.peggedUSD
-    const vals = Object.values(t.circulating).filter(v => typeof v === 'number')
-    if (vals.length) return vals.reduce((a, b) => a + b, 0)
-  }
-  // Shape C: { totalCirculatingUSD: { peggedUSD: number } }
-  if (t.totalCirculatingUSD != null) {
-    if (typeof t.totalCirculatingUSD === 'number') return t.totalCirculatingUSD
-    if (typeof t.totalCirculatingUSD?.peggedUSD === 'number') return t.totalCirculatingUSD.peggedUSD
-  }
-  // Shape D: direct { peggedUSD: number }
-  if (typeof t.peggedUSD === 'number') return t.peggedUSD
-  // Shape E: { totalCirculating: number }
-  if (typeof t.totalCirculating === 'number') return t.totalCirculating
-  return 0
+
+  return (
+    // /stablecoincharts shape: {totalCirculatingUSD: {peggedUSD}}
+    tryObj(t.totalCirculatingUSD) ??
+    // /stablecoin/{id} shape A: {circulatingSupply: {peggedUSD}}
+    tryObj(t.circulatingSupply) ??
+    // shape B: {circulating: {peggedUSD}}
+    tryObj(t.circulating) ??
+    // shape C: direct top-level number fields
+    tryNum(t.peggedUSD) ??
+    tryNum(t.totalCirculating) ??
+    tryNum(t.amount) ??
+    tryNum(t.supply) ??
+    tryNum(t.balance) ??
+    // shape D: {minted - unreleased}
+    (() => {
+      const m = tryObj(t.minted) ?? tryNum(t.minted) ?? 0
+      const u = tryObj(t.unreleased) ?? tryNum(t.unreleased) ?? 0
+      return m > 0 ? m - u : null
+    })() ??
+    0
+  )
 }
 
 const cutoff = Math.floor(Date.now() / 1000) - 365 * 86400
@@ -83,6 +92,56 @@ async function fetchJSON(url) {
   return res.json()
 }
 
+async function fetchSeriesForCoin(coin) {
+  // Method 1: /stablecoincharts/Base?stablecoin={id}
+  // Returns: [{date, totalCirculatingUSD:{peggedUSD}}]
+  try {
+    const url = `https://stablecoins.llama.fi/stablecoincharts/Base?stablecoin=${coin.id}`
+    const raw = await fetchJSON(url)
+    if (Array.isArray(raw) && raw.length > 0) {
+      // Log raw shape once per run
+      if (!fetchSeriesForCoin._logged) {
+        fetchSeriesForCoin._logged = true
+        console.log(`  [debug:charts] point[0]: ${JSON.stringify(raw[0])}`)
+        console.log(`  [debug:charts] point[1]: ${JSON.stringify(raw[1])}`)
+        mkdirSync(join(__dirname, '..', 'public'), { recursive: true })
+        writeFileSync(DEBUG_PATH, JSON.stringify({ method: 'charts', raw0: raw[0], raw1: raw[1] }, null, 2))
+      }
+      const series = raw
+        .filter((p) => p.date >= cutoff)
+        .map((p) => ({ date: p.date, supply: extractSupply(p) }))
+        .sort((a, b) => a.date - b.date)
+      if (series.length > 0 && series.some((p) => p.supply > 0)) return series
+      console.log(`    /stablecoincharts gave ${series.length} points but all zero — trying fallback`)
+    }
+  } catch (err) {
+    console.log(`    /stablecoincharts failed: ${err.message}`)
+  }
+
+  // Method 2: /stablecoin/{id} → chainBalances.Base.tokens
+  const detail = await fetchJSON(`https://stablecoins.llama.fi/stablecoin/${coin.id}`)
+  if (!fetchSeriesForCoin._loggedDetail) {
+    fetchSeriesForCoin._loggedDetail = true
+    const cbKeys = Object.keys(detail.chainBalances ?? {})
+    console.log(`  [debug:detail] chainBalances keys (first 8): ${cbKeys.slice(0, 8).join(', ')}`)
+    const baseData = detail.chainBalances?.Base ?? detail.chainBalances?.base
+    const toks = baseData?.tokens ?? []
+    if (toks.length > 0) {
+      console.log(`  [debug:detail] token[0]: ${JSON.stringify(toks[0])}`)
+      mkdirSync(join(__dirname, '..', 'public'), { recursive: true })
+      writeFileSync(DEBUG_PATH, JSON.stringify({
+        method: 'detail', cbKeys, token0: toks[0], token1: toks[1],
+      }, null, 2))
+    }
+  }
+  const baseData = detail.chainBalances?.Base ?? detail.chainBalances?.base
+  const tokens = baseData?.tokens ?? []
+  return tokens
+    .filter((t) => t.date >= cutoff)
+    .map((t) => ({ date: t.date, supply: extractSupply(t) }))
+    .sort((a, b) => a.date - b.date)
+}
+
 async function main() {
   console.log('Fetching stablecoin list…')
   const list = await fetchJSON('https://stablecoins.llama.fi/stablecoins')
@@ -93,48 +152,21 @@ async function main() {
   console.log(`Found ${baseCoins.length} stablecoins on Base: ${baseCoins.map((c) => c.symbol).join(', ')}`)
 
   const results = []
-  let rawLogged = false
 
   for (const coin of baseCoins) {
     console.log(`  Fetching history for ${coin.symbol} (id=${coin.id})…`)
     try {
-      const detail = await fetchJSON(`https://stablecoins.llama.fi/stablecoin/${coin.id}`)
-
-      // Log raw structure once so we can verify field paths in CI
-      if (!rawLogged) {
-        rawLogged = true
-        const cbKeys = Object.keys(detail.chainBalances ?? {})
-        console.log(`  [debug] chainBalances keys (first 8): ${cbKeys.slice(0, 8).join(', ')}`)
-        // Try both 'Base' and 'base' key
-        const baseData = detail.chainBalances?.Base ?? detail.chainBalances?.base
-        const rawTokens = baseData?.tokens ?? []
-        if (rawTokens.length > 0) {
-          console.log(`  [debug] token[0] full: ${JSON.stringify(rawTokens[0])}`)
-          console.log(`  [debug] token[1] full: ${JSON.stringify(rawTokens[1])}`)
-        } else {
-          console.log(`  [debug] Base tokens array empty. Detail top-level keys: ${Object.keys(detail).join(', ')}`)
-        }
-        // Also write raw debug file for inspection
-        writeFileSync(
-          join(__dirname, '..', 'public', 'debug-raw-token.json'),
-          JSON.stringify({ cbKeys, token0: rawTokens[0], token1: rawTokens[1] }, null, 2)
-        )
-      }
-
-      const baseChain = detail.chainBalances?.Base ?? detail.chainBalances?.base
-      const tokens = baseChain?.tokens ?? []
-      const series = tokens
-        .filter((t) => t.date >= cutoff)
-        .map((t) => ({ date: t.date, supply: extractSupply(t) }))
-        .sort((a, b) => a.date - b.date)
-
+      const series = await fetchSeriesForCoin(coin)
       if (series.length === 0) {
-        console.log(`    No Base series data for ${coin.symbol}, skipping`)
+        console.log(`    No Base series, skipping`)
         continue
       }
-
-      const latestSupply = series[series.length - 1].supply
-      console.log(`    ${series.length} data points, latest: $${(latestSupply / 1e6).toFixed(1)}M`)
+      const nonZero = series.filter((p) => p.supply > 0).length
+      const latest = series[series.length - 1]
+      const supplyStr = latest.supply >= 1e9
+        ? `$${(latest.supply / 1e9).toFixed(3)}B`
+        : `$${(latest.supply / 1e6).toFixed(1)}M`
+      console.log(`    ${series.length} points, ${nonZero} non-zero, latest: ${supplyStr}`)
 
       results.push({
         id: coin.id,
@@ -145,9 +177,9 @@ async function main() {
         series,
       })
     } catch (err) {
-      console.error(`    Failed to fetch ${coin.symbol}: ${err.message}`)
+      console.error(`    Error: ${err.message}`)
     }
-    await new Promise((r) => setTimeout(r, 200))
+    await new Promise((r) => setTimeout(r, 150))
   }
 
   results.sort((a, b) => b.currentSupply - a.currentSupply)
@@ -156,7 +188,7 @@ async function main() {
   writeFileSync(OUT_PATH, JSON.stringify(results, null, 2))
 
   console.log(`\nWrote ${results.length} stablecoins to ${OUT_PATH}`)
-  console.log('\nLatest supplies (final-frame verification):')
+  console.log('\nFinal-frame verification (compare with defillama.com/stablecoins/Base):')
   for (const c of results) {
     const latest = c.series[c.series.length - 1]
     const supplyStr = latest.supply >= 1e9
