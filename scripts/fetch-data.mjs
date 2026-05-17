@@ -51,18 +51,24 @@ function extractSupply(t) {
   if (t.circulatingSupply != null) {
     if (typeof t.circulatingSupply === 'number') return t.circulatingSupply
     if (typeof t.circulatingSupply?.peggedUSD === 'number') return t.circulatingSupply.peggedUSD
-    // sum all peg types
     const vals = Object.values(t.circulatingSupply).filter(v => typeof v === 'number')
     if (vals.length) return vals.reduce((a, b) => a + b, 0)
   }
-  // Shape B: { totalCirculatingUSD: { peggedUSD: number } }
+  // Shape B: { circulating: { peggedUSD: number } }  ← matches /stablecoins list shape
+  if (t.circulating != null) {
+    if (typeof t.circulating === 'number') return t.circulating
+    if (typeof t.circulating?.peggedUSD === 'number') return t.circulating.peggedUSD
+    const vals = Object.values(t.circulating).filter(v => typeof v === 'number')
+    if (vals.length) return vals.reduce((a, b) => a + b, 0)
+  }
+  // Shape C: { totalCirculatingUSD: { peggedUSD: number } }
   if (t.totalCirculatingUSD != null) {
     if (typeof t.totalCirculatingUSD === 'number') return t.totalCirculatingUSD
     if (typeof t.totalCirculatingUSD?.peggedUSD === 'number') return t.totalCirculatingUSD.peggedUSD
   }
-  // Shape C: direct { peggedUSD: number }
+  // Shape D: direct { peggedUSD: number }
   if (typeof t.peggedUSD === 'number') return t.peggedUSD
-  // Shape D: { totalCirculating: number }
+  // Shape E: { totalCirculating: number }
   if (typeof t.totalCirculating === 'number') return t.totalCirculating
   return 0
 }
@@ -97,18 +103,26 @@ async function main() {
       // Log raw structure once so we can verify field paths in CI
       if (!rawLogged) {
         rawLogged = true
-        const chains = Object.keys(detail.chainBalances ?? {})
-        console.log(`  [debug] chainBalances keys sample: ${chains.slice(0, 6).join(', ')}`)
-        const tokens = detail.chainBalances?.Base?.tokens ?? []
-        if (tokens.length > 0) {
-          console.log(`  [debug] first Base token keys: ${Object.keys(tokens[0]).join(', ')}`)
-          console.log(`  [debug] first Base token: ${JSON.stringify(tokens[0])}`)
+        const cbKeys = Object.keys(detail.chainBalances ?? {})
+        console.log(`  [debug] chainBalances keys (first 8): ${cbKeys.slice(0, 8).join(', ')}`)
+        // Try both 'Base' and 'base' key
+        const baseData = detail.chainBalances?.Base ?? detail.chainBalances?.base
+        const rawTokens = baseData?.tokens ?? []
+        if (rawTokens.length > 0) {
+          console.log(`  [debug] token[0] full: ${JSON.stringify(rawTokens[0])}`)
+          console.log(`  [debug] token[1] full: ${JSON.stringify(rawTokens[1])}`)
         } else {
-          console.log(`  [debug] no Base tokens found. chainBalances keys: ${JSON.stringify(chains)}`)
+          console.log(`  [debug] Base tokens array empty. Detail top-level keys: ${Object.keys(detail).join(', ')}`)
         }
+        // Also write raw debug file for inspection
+        writeFileSync(
+          join(__dirname, '..', 'public', 'debug-raw-token.json'),
+          JSON.stringify({ cbKeys, token0: rawTokens[0], token1: rawTokens[1] }, null, 2)
+        )
       }
 
-      const tokens = detail.chainBalances?.Base?.tokens ?? []
+      const baseChain = detail.chainBalances?.Base ?? detail.chainBalances?.base
+      const tokens = baseChain?.tokens ?? []
       const series = tokens
         .filter((t) => t.date >= cutoff)
         .map((t) => ({ date: t.date, supply: extractSupply(t) }))
