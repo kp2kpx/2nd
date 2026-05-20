@@ -4,12 +4,8 @@
     "name": "USD Coin",
     "symbol": "USDC",
     "color": "#2775CA",
-    "currentSupply": 4269822772.233294,
+    "currentSupply": 4273092049.1118217,
     "series": [
-      {
-        "date": "1747699200",
-        "supply": 3721918855
-      },
       {
         "date": "1747785600",
         "supply": 3726562048
@@ -1464,7 +1460,7 @@
       },
       {
         "date": "1779148800",
-        "supply": 4273318814.03
+        "supply": 4273125573.78
       }
     ]
   },
@@ -1473,12 +1469,8 @@
     "name": "Sky Dollar",
     "symbol": "USDS",
     "color": "#7B61FF",
-    "currentSupply": 146555855.59326097,
+    "currentSupply": 146711236.206918,
     "series": [
-      {
-        "date": "1747699200",
-        "supply": 122702038
-      },
       {
         "date": "1747785600",
         "supply": 122697988
@@ -2933,7 +2925,7 @@
       },
       {
         "date": "1779148800",
-        "supply": 146553478.76
+        "supply": 146710402.38
       }
     ]
   },
@@ -2942,7 +2934,7 @@
     "name": "rwaUSDi",
     "symbol": "rwaUSDi",
     "color": "#D4A843",
-    "currentSupply": 111375016.71421582,
+    "currentSupply": 111363326.35400009,
     "series": [
       {
         "date": "1774396800",
@@ -3166,7 +3158,7 @@
       },
       {
         "date": "1779148800",
-        "supply": 111375016.71
+        "supply": 111370647.57
       }
     ]
   },
@@ -3175,12 +3167,8 @@
     "name": "Cygnus Finance Global USD",
     "symbol": "cgUSD",
     "color": "#3ECFCF",
-    "currentSupply": 75135138.74935196,
+    "currentSupply": 75126361.09108065,
     "series": [
-      {
-        "date": "1747699200",
-        "supply": 55200589
-      },
       {
         "date": "1747785600",
         "supply": 55857721
@@ -4635,7 +4623,7 @@
       },
       {
         "date": "1779148800",
-        "supply": 75135138.74
+        "supply": 75119737.73
       }
     ]
   },
@@ -4644,12 +4632,8 @@
     "name": "River Stablecoin",
     "symbol": "satUSD",
     "color": "#FF6B35",
-    "currentSupply": 32572420.191863265,
+    "currentSupply": 32604563.11979691,
     "series": [
-      {
-        "date": "1747699200",
-        "supply": 9371418
-      },
       {
         "date": "1747785600",
         "supply": 9419493
@@ -6104,7 +6088,7 @@
       },
       {
         "date": "1779148800",
-        "supply": 32572420.19
+        "supply": 32571198.38
       }
     ]
   }
