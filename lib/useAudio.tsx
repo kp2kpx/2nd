@@ -59,6 +59,8 @@ export type SfxName = "hit" | "crit" | "death" | "victory" | "round_start";
 interface AudioConfig {
   musicSrc?: string;
   sfxSrcs?: Partial<Record<SfxName, string>>;
+  /** Set to true to suppress background music entirely (SFX still work). */
+  disableMusic?: boolean;
 }
 
 interface UseAudioReturn {
@@ -189,8 +191,9 @@ function playSyntheticSfx(ctx: AudioContext, name: SfxName): void {
 // ─── Hook ────────────────────────────────────────────────────────────────────
 
 export function useAudio(config: AudioConfig = {}): UseAudioReturn {
-  const musicSrc = config.musicSrc ?? DEFAULT_MUSIC_SRC;
-  const sfxSrcs  = { ...DEFAULT_SFX_SRCS, ...config.sfxSrcs };
+  const musicSrc     = config.musicSrc ?? DEFAULT_MUSIC_SRC;
+  const sfxSrcs      = { ...DEFAULT_SFX_SRCS, ...config.sfxSrcs };
+  const disableMusic = config.disableMusic ?? false;
 
   // Read initial mute state from localStorage (SSR-safe)
   const [isMuted, setIsMuted] = useState<boolean>(() => {
@@ -307,16 +310,16 @@ export function useAudio(config: AudioConfig = {}): UseAudioReturn {
       audioCtxRef.current.resume().catch(() => {});
     }
 
-    // Start music unless muted
+    // Start music unless muted or explicitly disabled for this provider instance
     const music = musicRef.current;
-    if (music && !isMutedRef.current) {
+    if (music && !isMutedRef.current && !disableMusic) {
       music.play()
         .then(() => fadeIn(music, MUSIC_VOLUME))
         .catch(() => {
           // Autoplay still blocked in some contexts — fail silently
         });
     }
-  }, [fadeIn]);
+  }, [fadeIn, disableMusic]);
 
   // ── Mute toggle ──────────────────────────────────────────────────────────
 
@@ -339,8 +342,8 @@ export function useAudio(config: AudioConfig = {}): UseAudioReturn {
           if (fadeTimerRef.current) clearInterval(fadeTimerRef.current);
           music.pause();
         } else {
-          // Unmuting — resume music if unlocked
-          if (unlockedRef.current) {
+          // Unmuting — resume music if unlocked and not disabled
+          if (unlockedRef.current && !disableMusic) {
             music.play()
               .then(() => fadeIn(music, MUSIC_VOLUME))
               .catch(() => {});
@@ -350,7 +353,7 @@ export function useAudio(config: AudioConfig = {}): UseAudioReturn {
 
       return next;
     });
-  }, [fadeIn]);
+  }, [fadeIn, disableMusic]);
 
   // ── Play SFX ─────────────────────────────────────────────────────────────
 
@@ -402,8 +405,13 @@ export function AudioProvider({
   // anywhere on the page so music starts as soon as the user does anything,
   // not just when FightReplay mounts. This is the most reliable way to satisfy
   // browser autoplay policy without requiring explicit opt-in.
+  //
+  // Skipped when disableMusic is true: those providers are scoped to pages that
+  // should never start background music (e.g. the Training Ground sandbox).
+  // FightReplay still calls unlockAndPlay() directly so SFX still work.
   useEffect(() => {
     if (typeof window === "undefined") return;
+    if (config?.disableMusic) return; // no doc listener needed; no music to start
 
     const unlock = () => audio.unlockAndPlay();
     const events = ["click", "touchstart", "keydown"] as const;
@@ -411,7 +419,7 @@ export function AudioProvider({
     return () => {
       events.forEach((e) => document.removeEventListener(e, unlock));
     };
-  }, [audio.unlockAndPlay]);
+  }, [audio.unlockAndPlay, config?.disableMusic]);
 
   return <AudioCtx.Provider value={audio}>{children}</AudioCtx.Provider>;
 }

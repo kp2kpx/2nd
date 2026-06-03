@@ -166,6 +166,29 @@ body {
   box-shadow: 0 1px 4px rgba(80,50,20,0.1), inset 0 1px 0 rgba(255,245,220,0.5);
 }
 
+/* Fight log scrollbar — thin, dark, matches parchment palette */
+.fight-log-scroll::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+.fight-log-scroll::-webkit-scrollbar-track {
+  background: #1a1510;
+  border-radius: 2px;
+}
+.fight-log-scroll::-webkit-scrollbar-thumb {
+  background: #3a2e20;
+  border-radius: 2px;
+}
+.fight-log-scroll::-webkit-scrollbar-thumb:hover {
+  background: #d4a853;
+}
+
+/* Fight log fade-in when it appears after a fight */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
 .match-card:hover {
   border-color: #8b1a1a;
   border-bottom-color: #5a0e0e;

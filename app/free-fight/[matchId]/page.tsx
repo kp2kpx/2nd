@@ -48,8 +48,15 @@ export default function FreeFightRoom({
   const [view, setView] = useState<ViewState>("loading");
   const [match, setMatch] = useState<FreeMatch | null>(null);
   // Ref mirrors match state so interval callbacks (stale closures) can always
-  // access the most-recently-loaded match data — specifically stats1 fallback.
+  // access the most-recently-loaded match data.
   const matchRef = useRef<FreeMatch | null>(null);
+  // Separate ref that captures stats1 from the very first successful load and
+  // is NEVER overwritten. This is the fix for the creator stuck on
+  // "WAITING FOR OPPONENT": loadMatch() is called on every poll tick and
+  // overwrites matchRef.current — so using matchRef as the stats1 fallback
+  // doesn't help if the first polled "ready" record also lacks stats1 (KV lag).
+  // stats1Ref holds the original creator stats regardless of poll results.
+  const stats1Ref = useRef<FreeMatch["stats1"] | null>(null);
   const [myRole, setMyRole] = useState<"p1" | "p2" | "spectator">("spectator");
   const [stats, setStats] = useState<GladiatorStats>(DEFAULT_STATS);
   const [fightResult, setFightResult] = useState<FightResult | null>(null);
@@ -70,6 +77,11 @@ export default function FreeFightRoom({
     const m: FreeMatch = await res.json();
     setMatch(m);
     matchRef.current = m;
+    // Capture stats1 the first time we see it — never overwrite so the creator's
+    // original stats survive across multiple poll iterations.
+    if (m.stats1 && !stats1Ref.current) {
+      stats1Ref.current = m.stats1;
+    }
     return m;
   }, [matchId]);
 
@@ -153,27 +165,25 @@ export default function FreeFightRoom({
   }
 
   // ── Poll while waiting for player2 ──────────────────────────────────────────
-  // Bug 2 fix: don't clearInterval before confirming stats are present.
-  // Root cause: the join route's KV write spreads the existing match. If KV
-  // read-after-write hits a lagging replica that doesn't yet have the creator's
-  // stats1 PATCH, the join-produced record omits stats1. The old code called
-  // clearInterval before runFight, so a silent early-return (missing stats)
-  // left the creator stuck on "WAITING FOR OPPONENT" with no retry.
+  // Root cause of the original bug: the join route writes stats2 + state:"ready"
+  // in one KV set. If Vercel KV read-after-write hits a lagging replica, the
+  // polled "ready" record may be missing stats1 (written by an earlier PATCH).
   //
-  // Fix: keep polling if state is "ready" but stats aren't both present yet.
-  // Use matchRef to access the latest-loaded match from the stale interval
-  // closure — this gives us the stats1 that was present at mount time as
-  // a fallback if the freshly-polled record is missing it due to KV lag.
+  // Fix: stats1Ref captures stats1 from the very first load and is never
+  // overwritten. loadMatch() overwrites matchRef.current on every call, so
+  // matchRef is NOT a reliable fallback — by the time the opponent joins and the
+  // poll fires, matchRef.current holds the most recent poll result which may also
+  // lack stats1 if the replica is lagging. stats1Ref survives all polls.
   useEffect(() => {
     if (view !== "waiting_p2") return;
     const interval = setInterval(async () => {
       const m = await loadMatch();
       if (!m || m.state !== "ready") return; // still waiting — keep polling
 
-      // If stats1 is missing from the polled match but present in an earlier
-      // load (e.g. initial mount), recover it. matchRef.current is always the
-      // most-recently-loaded match, but may be the same stale copy; try both.
-      const stats1 = m.stats1 ?? matchRef.current?.stats1;
+      // Use stats1Ref as the authoritative fallback for the creator's stats.
+      // stats1Ref is set once (on the first load that contains stats1) and
+      // never overwritten, so it survives across all subsequent poll iterations.
+      const stats1 = m.stats1 ?? stats1Ref.current;
       if (!stats1 || !m.stats2) {
         // Stats not yet propagated — keep polling, do NOT clear interval yet
         return;
@@ -207,16 +217,18 @@ export default function FreeFightRoom({
     const opponentLabel = iAmP1 ? resolvedP2 : resolvedP1;
     setOpponentUsername(opponentLabel);
 
-    const winner = result.winner === "p1" ? m.player1 : m.player2!;
-    const loser = result.winner === "p1" ? m.player2! : m.player1;
-    const winnerFid = result.winner === "p1" ? m.player1Fid : m.player2Fid;
+    const isDraw = result.winner === "draw";
+    const winner = isDraw ? null : result.winner === "p1" ? m.player1 : m.player2!;
+    const loser = isDraw ? null : result.winner === "p1" ? m.player2! : m.player1;
+    const winnerFid = isDraw ? null : result.winner === "p1" ? m.player1Fid : m.player2Fid;
 
     // Persist winner to KV so profile history can show WIN/LOSS instead of PENDING.
+    // For draws: no winner/loser recorded; resolve API handles null gracefully.
     // Fire-and-forget; idempotent if both players trigger runFight simultaneously.
     fetch("/api/free-match/resolve", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ matchId, winnerAddress: winner, winnerFid }),
+      body: JSON.stringify({ matchId, winnerAddress: winner, winnerFid, isDraw }),
     }).catch(() => {});
 
     fetch("/api/points/award", {
@@ -273,13 +285,13 @@ export default function FreeFightRoom({
   async function handleShare() {
     if (!playerId || sharedPoints || !fightResult || !match) return;
 
-    const winner = fightResult.winner === "p1" ? match.player1 : match.player2;
-    const myWinner = playerId?.toLowerCase() === winner?.toLowerCase();
+    const winner = fightResult.winner === "draw" ? null : fightResult.winner === "p1" ? match.player1 : match.player2;
+    const myWinner = winner != null && playerId?.toLowerCase() === winner?.toLowerCase();
     const shareText = encodeURIComponent(
       `My gladaitor just ${myWinner ? "WON" : "fought hard"} in GLADAITOR (FREE FIGHT) ⚔️ — gladaitors.vercel.app`
     );
     window.open(
-      `https://warpcast.com/~/compose?text=${shareText}`,
+      `https://farcaster.xyz/~/compose?text=${shareText}`,
       "_blank",
       "noopener,noreferrer"
     );
@@ -304,7 +316,7 @@ export default function FreeFightRoom({
   }
 
   // Match is loaded but player identity (address or FID) hasn't resolved yet.
-  // This is a transient state — typically resolves in <1s inside Warpcast.
+  // This is a transient state — typically resolves in <1s inside Farcaster.
   if (view === "connecting") {
     return (
       <div className="arena-bg min-h-screen flex items-center justify-center">
@@ -338,7 +350,7 @@ export default function FreeFightRoom({
             Build Your Gladaitor
           </h1>
           <p className="text-gray-500 text-sm mb-6">
-            You are joining fight {matchId.slice(0, 8)}... — configure your gladaitor and enter the pit.
+            You are joining fight {matchId} — configure your gladaitor and enter the pit.
           </p>
           <div className="bg-gray-900 border border-gray-800 rounded-lg p-5 mb-5">
             <StatAllocator stats={stats} onChange={setStats} disabled={false} />
@@ -375,7 +387,7 @@ export default function FreeFightRoom({
         ? window.location.origin
         : "https://gladaitors.vercel.app";
     const fightUrl = `${origin}/free-fight/${matchId}`;
-    const warpcastUrl = `https://warpcast.com/~/compose?text=${encodeURIComponent(
+    const farcasterComposeUrl = `https://farcaster.xyz/~/compose?text=${encodeURIComponent(
       "Come fight me in GLADAITOR! ⚔️ Configure your gladaitor and challenge me (FREE)"
     )}&embeds[]=${encodeURIComponent(fightUrl)}`;
 
@@ -398,7 +410,7 @@ export default function FreeFightRoom({
           <div className="space-y-3 mb-4">
             <button
               className="btn-primary w-full"
-              onClick={() => window.open(warpcastUrl, "_blank", "noopener,noreferrer")}
+              onClick={() => window.open(farcasterComposeUrl, "_blank", "noopener,noreferrer")}
             >
               Share on Farcaster
             </button>

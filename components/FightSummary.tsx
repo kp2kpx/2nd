@@ -280,17 +280,6 @@ export default function FightSummary({
             : `You lost to ${opponentName}`}
         </div>
 
-        {/* Winner name — big */}
-        <div className="text-2xl font-black text-white tracking-widest">
-          {winnerLabel}
-        </div>
-
-        {/* Fight summary line */}
-        <div className="text-sm mt-1" style={{ color: viewerWon ? "#fbbf24" : "#9ca3af" }}>
-          {result.rounds} round{result.rounds !== 1 ? "s" : ""} &middot; Winner had{" "}
-          {isP1Winner ? result.hp1Final : result.hp2Final} HP remaining
-        </div>
-
         {/* Taunt */}
         {viewerLost && taunt && (
           <div className="mt-3 text-xs italic" style={{ color: "#6b7280" }}>
@@ -306,14 +295,14 @@ export default function FightSummary({
 
       {/* ── Combat breakdown ─────────────────────────────────────────────────── */}
       <div className="rounded-lg p-4" style={{ background: "#12100e", border: "1px solid #2a2218" }}>
-        <p className="text-xs uppercase tracking-widest mb-4 font-bold" style={{ color: "#6b4c2a" }}>
+        <p className="text-xs uppercase tracking-widest mb-4 font-bold" style={{ color: "#c8b89a" }}>
           Combat Breakdown
         </p>
 
         {/* Header row */}
         <div className="grid grid-cols-3 gap-2 text-center text-xs mb-3">
           <div className="font-bold uppercase tracking-widest" style={{ color: isP1Winner ? "#fbbf24" : "#ef4444" }}>{p1Label}</div>
-          <div style={{ color: "#4b3a28" }}>—</div>
+          <div style={{ color: "#9a9080" }}>—</div>
           <div className="font-bold uppercase tracking-widest" style={{ color: !isP1Winner ? "#fbbf24" : "#a78bfa" }}>{p2Label}</div>
         </div>
 
@@ -337,14 +326,14 @@ export default function FightSummary({
             style={{ borderTop: i === 0 ? `1px solid #2a2218` : `1px solid #1e1a14` }}
           >
             <div className="tabular-nums font-bold text-white">{v1}</div>
-            <div className="text-center" style={{ color: "#4b3a28", fontSize: "0.65rem", lineHeight: 1.3 }}>{label}</div>
+            <div className="text-center" style={{ color: "#9a9080", fontSize: "0.65rem", lineHeight: 1.3 }}>{label}</div>
             <div className="tabular-nums font-bold text-white">{v2}</div>
           </div>
         ))}
 
         {/* Speed advantage note */}
         {combat.hadDoubleAttack && (
-          <div className="mt-3 text-center text-xs" style={{ color: "#6b4c2a" }}>
+          <div className="mt-3 text-center text-xs" style={{ color: "#9a9080" }}>
             Speed gap of {combat.speedGap} triggered double strikes each round
           </div>
         )}
@@ -413,7 +402,7 @@ function GladCard({
       }}
     >
       <div className="flex items-center justify-between mb-3">
-        <span className="text-xs uppercase tracking-widest truncate max-w-[120px]" style={{ color: "#6b4c2a" }}>
+        <span className="text-xs uppercase tracking-widest break-all" style={{ color: "#c8b89a" }}>
           {label}
         </span>
         {isWinner && <span className="text-xs font-bold shrink-0" style={{ color: "#fbbf24" }}>WINNER</span>}
@@ -421,7 +410,7 @@ function GladCard({
       <div className="space-y-2">
         {(Object.keys(stats) as (keyof GladiatorStats)[]).map((stat) => (
           <div key={stat} className="flex items-center gap-1.5">
-            <span className="text-xs uppercase w-20 font-bold shrink-0" style={{ color: "#6b4c2a", fontSize: "0.6rem", letterSpacing: "0.04em" }}>
+            <span className="text-xs uppercase w-20 font-bold shrink-0" style={{ color: "#9a9080", fontSize: "0.6rem", letterSpacing: "0.04em" }}>
               {STAT_FULL[stat]}
             </span>
             <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: "#2a2218" }}>
