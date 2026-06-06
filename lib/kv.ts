@@ -215,6 +215,44 @@ export async function getLeaderboard(): Promise<PointRecord[]> {
 }
 
 // --------------------------------------------------------------------------
+// Paid match stats
+// Keyed by on-chain matchId. Both players write their stats here before
+// the house calls resolve. TTL: 7 days.
+// --------------------------------------------------------------------------
+
+export interface PaidMatchStats {
+  matchId: string;
+  player1?: string; // wallet address
+  player2?: string;
+  stats1?: {
+    strength: number;
+    speed: number;
+    defense: number;
+    intel: number;
+    luck: number;
+  };
+  stats2?: {
+    strength: number;
+    speed: number;
+    defense: number;
+    intel: number;
+    luck: number;
+  };
+  winner?: string; // wallet address or "draw"
+  resolvedAt?: number;
+}
+
+const PAID_MATCH_TTL = 60 * 60 * 24 * 7; // 7 days
+
+export async function getPaidMatchStats(matchId: string): Promise<PaidMatchStats | null> {
+  return await kv.get<PaidMatchStats>(`paid_match:${matchId}`);
+}
+
+export async function setPaidMatchStats(stats: PaidMatchStats): Promise<void> {
+  await kv.set(`paid_match:${stats.matchId}`, stats, { ex: PAID_MATCH_TTL });
+}
+
+// --------------------------------------------------------------------------
 // Paid-fight points deduplication
 // Prevents re-awarding points if the fight result screen is refreshed.
 // TTL matches share-tracking: 7 days.
