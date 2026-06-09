@@ -4,12 +4,8 @@
     "name": "USD Coin",
     "symbol": "USDC",
     "color": "#2775CA",
-    "currentSupply": 4320114969.519492,
+    "currentSupply": 4341737197.396129,
     "series": [
-      {
-        "date": "1749427200",
-        "supply": 3671281694
-      },
       {
         "date": "1749513600",
         "supply": 3695920301
@@ -1464,7 +1460,11 @@
       },
       {
         "date": "1780876800",
-        "supply": 4326875951.25
+        "supply": 4326832932
+      },
+      {
+        "date": "1780963200",
+        "supply": 4332359978
       }
     ]
   },
@@ -1473,12 +1473,8 @@
     "name": "Sky Dollar",
     "symbol": "USDS",
     "color": "#7B61FF",
-    "currentSupply": 147385114.42280996,
+    "currentSupply": 147542541.07709423,
     "series": [
-      {
-        "date": "1749427200",
-        "supply": 122891545
-      },
       {
         "date": "1749513600",
         "supply": 122893512
@@ -2933,7 +2929,11 @@
       },
       {
         "date": "1780876800",
-        "supply": 147385114.42
+        "supply": 147415075
+      },
+      {
+        "date": "1780963200",
+        "supply": 147502550.43
       }
     ]
   },
@@ -2942,7 +2942,7 @@
     "name": "rwaUSDi",
     "symbol": "rwaUSDi",
     "color": "#D4A843",
-    "currentSupply": 123779422.61055604,
+    "currentSupply": 123787944.76002002,
     "series": [
       {
         "date": "1774396800",
@@ -3246,7 +3246,11 @@
       },
       {
         "date": "1780876800",
-        "supply": 123779422.61
+        "supply": 123778192
+      },
+      {
+        "date": "1780963200",
+        "supply": 123787944.76
       }
     ]
   },
@@ -3255,12 +3259,8 @@
     "name": "Cygnus Finance Global USD",
     "symbol": "cgUSD",
     "color": "#3ECFCF",
-    "currentSupply": 75610543.18499333,
+    "currentSupply": 75620365.35320294,
     "series": [
-      {
-        "date": "1749427200",
-        "supply": 71101267
-      },
       {
         "date": "1749513600",
         "supply": 71290073
@@ -4715,7 +4715,11 @@
       },
       {
         "date": "1780876800",
-        "supply": 75610543.18
+        "supply": 75610653
+      },
+      {
+        "date": "1780963200",
+        "supply": 75620354.36
       }
     ]
   },
@@ -4724,12 +4728,8 @@
     "name": "River Stablecoin",
     "symbol": "satUSD",
     "color": "#FF6B35",
-    "currentSupply": 32559464.64398816,
+    "currentSupply": 32488290.412274703,
     "series": [
-      {
-        "date": "1749427200",
-        "supply": 10482190
-      },
       {
         "date": "1749513600",
         "supply": 10478334
@@ -6184,7 +6184,11 @@
       },
       {
         "date": "1780876800",
-        "supply": 32559464.64
+        "supply": 32496600
+      },
+      {
+        "date": "1780963200",
+        "supply": 32488290.41
       }
     ]
   }
