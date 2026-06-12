@@ -13,7 +13,7 @@ import { useRouter } from "next/navigation";
  * Logo uses mix-blend-mode: multiply to dissolve the white PNG background into
  * the warm parchment theme without needing a separate transparent asset.
  */
-export default function Navbar({ children }: { children?: React.ReactNode }) {
+export default function Navbar({ children, showBack }: { children?: React.ReactNode; showBack?: boolean; showProfile?: boolean }) {
   const router = useRouter();
 
   return (
@@ -21,6 +21,15 @@ export default function Navbar({ children }: { children?: React.ReactNode }) {
       className="flex items-center justify-between px-6 py-4 border-b"
       style={{ borderColor: "#c4a882" }}
     >
+      {showBack && (
+        <button
+          onClick={() => router.back()}
+          aria-label="Go back"
+          style={{ background: "none", border: "none", padding: 0, marginRight: 12, cursor: "pointer", color: "#6b4c2a", fontSize: "1.25rem", lineHeight: 1, flexShrink: 0 }}
+        >
+          {String.fromCharCode(8592)}
+        </button>
+      )}
       <button
         onClick={() => router.push("/")}
         aria-label="Go to home"

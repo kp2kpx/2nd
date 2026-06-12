@@ -12,7 +12,6 @@ import { simulateFight, FightResult } from "@/lib/fight-engine";
 import { GladiatorStats, TOTAL_POINTS, STAT_LABELS } from "@/lib/contract";
 import { useFarcasterAuth } from "@/lib/useFarcasterAuth";
 import sdk from "@farcaster/miniapp-sdk";
-import sdk from "@farcaster/miniapp-sdk";
 
 // Aitor â€” Easy difficulty. 25 pts. STR:6 SPD:5 DEF:5 INT:5 LCK:4
 const AITOR_STATS: GladiatorStats = {

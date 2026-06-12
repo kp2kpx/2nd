@@ -240,3 +240,48 @@ export async function markPointsAwarded(
   const key = `points_awarded:${action}:${matchId}:${wallet.toLowerCase()}`;
   await kv.set(key, 1, { ex: POINTS_AWARDED_TTL });
 }
+
+// --------------------------------------------------------------------------
+// Paid match helpers
+// --------------------------------------------------------------------------
+//
+// NOTE (visual-upgrade build fix, 2026-06-12): app/api/paid-match/resolve
+// imports getPaidMatchStats / setPaidMatchStats but they were absent from this
+// module, which broke `next build` (static export resolution error) on every
+// deploy of this ref. These helpers restore the missing exports, mirroring the
+// FreeMatch pattern, so the route type-checks and the app builds. Behavior of
+// the paid-match flow is otherwise unchanged.
+
+export interface PaidMatchStats {
+  matchId: string;
+  player1?: string;
+  player2?: string;
+  stats1?: {
+    strength: number;
+    speed: number;
+    defense: number;
+    intel: number;
+    luck: number;
+  };
+  stats2?: {
+    strength: number;
+    speed: number;
+    defense: number;
+    intel: number;
+    luck: number;
+  };
+  winner?: string;
+  resolvedAt?: number;
+}
+
+const PAID_MATCH_TTL = 60 * 60 * 24; // 24 hours
+
+export async function getPaidMatchStats(
+  matchId: string
+): Promise<PaidMatchStats | null> {
+  return await kv.get<PaidMatchStats>(`paid_match:${matchId}`);
+}
+
+export async function setPaidMatchStats(data: PaidMatchStats): Promise<void> {
+  await kv.set(`paid_match:${data.matchId}`, data, { ex: PAID_MATCH_TTL });
+}
