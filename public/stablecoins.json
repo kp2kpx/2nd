@@ -4,12 +4,8 @@
     "name": "USD Coin",
     "symbol": "USDC",
     "color": "#2775CA",
-    "currentSupply": 4246502581.1007366,
+    "currentSupply": 4228460470.4664817,
     "series": [
-      {
-        "date": "1749859200",
-        "supply": 3666222756
-      },
       {
         "date": "1749945600",
         "supply": 3669412951
@@ -1464,7 +1460,11 @@
       },
       {
         "date": "1781308800",
-        "supply": 4239277682.31
+        "supply": 4239431361
+      },
+      {
+        "date": "1781395200",
+        "supply": 4235357761.7
       }
     ]
   },
@@ -1473,12 +1473,8 @@
     "name": "Sky Dollar",
     "symbol": "USDS",
     "color": "#7B61FF",
-    "currentSupply": 147667937.63011152,
+    "currentSupply": 147749459.24249482,
     "series": [
-      {
-        "date": "1749859200",
-        "supply": 122889119
-      },
       {
         "date": "1749945600",
         "supply": 122972978
@@ -2933,7 +2929,11 @@
       },
       {
         "date": "1781308800",
-        "supply": 147667937.63
+        "supply": 147685800
+      },
+      {
+        "date": "1781395200",
+        "supply": 147746788.43
       }
     ]
   },
@@ -2942,7 +2942,7 @@
     "name": "rwaUSDi",
     "symbol": "rwaUSDi",
     "color": "#D4A843",
-    "currentSupply": 123790343.80325662,
+    "currentSupply": 123791733.19692653,
     "series": [
       {
         "date": "1774396800",
@@ -3266,7 +3266,11 @@
       },
       {
         "date": "1781308800",
-        "supply": 123790343.8
+        "supply": 123796802
+      },
+      {
+        "date": "1781395200",
+        "supply": 123793660.65
       }
     ]
   },
@@ -3275,12 +3279,8 @@
     "name": "Ethena USDe",
     "symbol": "USDe",
     "color": "#888888",
-    "currentSupply": 87408081.76759745,
+    "currentSupply": 100035348.61401978,
     "series": [
-      {
-        "date": "1749859200",
-        "supply": 129172
-      },
       {
         "date": "1749945600",
         "supply": 128215
@@ -4735,7 +4735,11 @@
       },
       {
         "date": "1781308800",
-        "supply": 72167055.4
+        "supply": 72180062
+      },
+      {
+        "date": "1781395200",
+        "supply": 100051428.22
       }
     ]
   },
@@ -4744,12 +4748,8 @@
     "name": "Cygnus Finance Global USD",
     "symbol": "cgUSD",
     "color": "#3ECFCF",
-    "currentSupply": 75683847.3895311,
+    "currentSupply": 75682052.10062906,
     "series": [
-      {
-        "date": "1749859200",
-        "supply": 72533375
-      },
       {
         "date": "1749945600",
         "supply": 72506895
@@ -6204,7 +6204,11 @@
       },
       {
         "date": "1781308800",
-        "supply": 75683847.39
+        "supply": 75691404
+      },
+      {
+        "date": "1781395200",
+        "supply": 75683612.43
       }
     ]
   }
