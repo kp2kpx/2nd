@@ -1,6 +1,0 @@
-{
-  "buildCommand": "node scripts/fetch-data.mjs && npm run build",
-  "outputDirectory": "dist",
-  "installCommand": "npm ci",
-  "framework": "vite"
-}
